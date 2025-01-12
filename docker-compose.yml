@@ -1,0 +1,194 @@
+version: '3.8'
+
+services:
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: shop_db
+      POSTGRES_USER: shop_user
+      POSTGRES_PASSWORD: shop_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:3.10.7-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=rmq_user
+      - RABBITMQ_DEFAULT_PASS=rmq_password
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+    ports:
+      - 15672:15672
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin4
+    ports:
+      - "8543:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: chelnik.chaa@yandex.ru
+      PGADMIN_DEFAULT_PASSWORD: hASKINTHG23
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - db
+
+  order-service:
+    build: ./order-service/.
+    ports:
+      - "8500:8080"
+    environment:
+      - DATABASE_URL=jdbc:postgresql://db:5432/shop_db
+      - DATABASE_USER=shop_user
+      - DATABASE_PASSWORD=shop_password
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_EXCHANGE=order_exchange
+      - RABBITMQ_QUEUE=payment_order_queue
+      - RABBITMQ_USER=rmq_user
+      - RABBITMQ_PASSWORD=rmq_password
+    depends_on:
+      - db
+      - rabbitmq
+
+  order-front:
+    image: nginx:alpine
+    ports:
+      - "9000:80"
+    volumes:
+      - ./order-front/nginx.conf:/etc/nginx/nginx.conf
+      - ./order-front/index.html:/usr/share/nginx/html/index.html
+      - ./order-front/script.js:/usr/share/nginx/html/script.js
+
+  payment-service:
+    build: ./payment-service/.
+    ports:
+      - "8501:8080"
+    environment:
+      - DATABASE_URL=jdbc:postgresql://db:5432/shop_db
+      - DATABASE_USER=shop_user
+      - DATABASE_PASSWORD=shop_password
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_EXCHANGE=order_exchange
+      - RABBITMQ_QUEUE=new_order_queue
+      - RABBITMQ_USER=rmq_user
+      - RABBITMQ_PASSWORD=rmq_password
+    depends_on:
+      - db
+      - rabbitmq
+      - order-service
+
+  payment-front:
+    image: nginx:alpine
+    ports:
+      - "9001:80"
+    volumes:
+      - ./payment-front/nginx.conf:/etc/nginx/nginx.conf
+      - ./payment-front/index.html:/usr/share/nginx/html/index.html
+      - ./payment-front/script.js:/usr/share/nginx/html/script.js
+
+  voronezh_store-service:
+    build: ./store-service/.
+    ports:
+      - "8511:8080"
+    environment:
+      - DATABASE_URL=jdbc:postgresql://db:5432/shop_db
+      - DATABASE_USER=shop_user
+      - DATABASE_PASSWORD=shop_password
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_EXCHANGE=order_exchange
+      - RABBITMQ_QUEUE=voronezh36_city_order_queue
+      - RABBITMQ_USER=rmq_user
+      - RABBITMQ_PASSWORD=rmq_password
+      - STORE_NAME=voronezh36
+    depends_on:
+      - db
+      - rabbitmq
+      - payment-service
+
+  voronezh-store-front:
+    image: nginx:alpine
+    ports:
+      - "9011:80"
+    volumes:
+      - ./store-front/vrn.conf:/etc/nginx/nginx.conf
+      - ./store-front/index.html:/usr/share/nginx/html/index.html
+      - ./store-front/script.js:/usr/share/nginx/html/script.js
+
+  tula_store-service:
+    build: ./store-service/.
+    ports:
+      - "8512:8080"
+    environment:
+      - DATABASE_URL=jdbc:postgresql://db:5432/shop_db
+      - DATABASE_USER=shop_user
+      - DATABASE_PASSWORD=shop_password
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_EXCHANGE=order_exchange
+      - RABBITMQ_QUEUE=tula71_city_order_queue
+      - RABBITMQ_USER=rmq_user
+      - RABBITMQ_PASSWORD=rmq_password
+      - STORE_NAME=tula71
+    depends_on:
+      - db
+      - rabbitmq
+      - payment-service
+
+  tula-store-front:
+    image: nginx:alpine
+    ports:
+      - "9012:80"
+    volumes:
+      - ./store-front/tula.conf:/etc/nginx/nginx.conf
+      - ./store-front/index.html:/usr/share/nginx/html/index.html
+      - ./store-front/script.js:/usr/share/nginx/html/script.js
+
+  moscow_store-service:
+    build: ./store-service/.
+    ports:
+      - "8513:8080"
+    environment:
+      - DATABASE_URL=jdbc:postgresql://db:5432/shop_db
+      - DATABASE_USER=shop_user
+      - DATABASE_PASSWORD=shop_password
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_EXCHANGE=order_exchange
+      - RABBITMQ_QUEUE=moscow77_city_order_queue
+      - RABBITMQ_USER=rmq_user
+      - RABBITMQ_PASSWORD=rmq_password
+      - STORE_NAME=moscow77
+    depends_on:
+      - db
+      - rabbitmq
+      - payment-service
+
+  msk-store-front:
+    image: nginx:alpine
+    ports:
+      - "9013:80"
+    volumes:
+      - ./store-front/msk.conf:/etc/nginx/nginx.conf
+      - ./store-front/index.html:/usr/share/nginx/html/index.html
+      - ./store-front/script.js:/usr/share/nginx/html/script.js
+
+volumes:
+  postgres_data:
+  pgadmin-data:
+  rabbitmq:
