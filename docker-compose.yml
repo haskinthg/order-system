@@ -57,7 +57,7 @@ services:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_EXCHANGE=order_exchange
-      - RABBITMQ_QUEUE=payment_order_queue
+      - RABBITMQ_QUEUE=status_order_queue
       - RABBITMQ_USER=rmq_user
       - RABBITMQ_PASSWORD=rmq_password
     depends_on:
